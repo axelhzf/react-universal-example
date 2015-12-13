@@ -1,40 +1,57 @@
 global.__CLIENT__ = false;
 global.__SERVER__ = true;
 
-import {Server} from "hapi";
 import React from "react";
 import {renderToString} from "react-dom/server";
 import {match, RoutingContext} from "react-router";
+import express from "express";
+import webpack from "webpack";
+import webpackDevMiddleware from "webpack-dev-middleware";
+import webpackHotMiddleware from "webpack-hot-middleware";
+import config from "../../webpack.config";
 
 import routes from "./routes";
 
-var hostname = process.env.HOSTNAME || 'localhost';
+const app = express();
+const compiler = webpack(config);
 
-const server = new Server();
-server.connection({
-  host: hostname,
-  port: process.env.PORT || 8000
+app.use(webpackDevMiddleware(compiler, {
+  noInfo: true,
+  publicPath: config.output.publicPath
+}));
+app.use(webpackHotMiddleware(compiler));
+
+app.use(webpackDevMiddleware(compiler, {
+  noInfo: false,
+  stats: {colors: true}
+}));
+
+app.use(webpackHotMiddleware(compiler));
+
+app.get("*", (req, res) => {
+  const location = req.originalUrl || "/";
+  match({routes, location}, (error, redirectLocation, renderProps) => {
+    if (error) {
+      res.status(505).send(error);
+    } else if (redirectLocation) {
+      const redirectPath = redirectLocation.pathname + redirectLocation.search;
+      res.redirect(redirectPath);
+    } else if (renderProps) {
+      res.send(body(renderProps))
+    } else {
+      res.status(404).send("Not found");
+    }
+  });
 });
 
-server.route({
-  method: "GET",
-  path: "/{path*}",
-  handler: (request, reply) => {
-    const location = request.params.path || "/";
-    match({routes, location}, (error, redirectLocation, renderProps) => {
-      if (error) {
-        reply(error);
-      } else if (redirectLocation) {
-        const redirectPath = redirectLocation.pathname + redirectLocation.search;
-        reply.redirect(redirectPath);
-      } else if (renderProps) {
-        reply(body(renderProps));
-      } else {
-        reply("Not found").code(404);
-      }
-    });
+app.listen(3000, 'localhost', error => {
+  if (error) {
+    console.log(error);
+    return;
   }
+  console.log('Listening at http://localhost:3000');
 });
+
 
 function body(renderProps) {
   var reactString = renderToString(<RoutingContext {...renderProps}/>);
@@ -46,13 +63,8 @@ function body(renderProps) {
 					</head>
 					<body>
 						<div id="app">${reactString}</div>
-						<script src="http://localhost:8080/assets/bundle.js"></script>
+						<script src="/assets/bundle.js"></script>
 					</body>
 				</html>`;
   return output;
 }
-
-server.start(function () {
-  console.info('==> ✅  Server is listening');
-  console.info(`Go to ${server.info.uri.toLowerCase()}`);
-});

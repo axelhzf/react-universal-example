@@ -2,7 +2,7 @@
   "name": "react-universal-example",
   "dependencies": {
     "babel-polyfill": "^6.3.14",
-    "hapi": "^11.1.2",
+    "express": "^4.13.3",
     "history": "1.13.0",
     "react": "^0.14.3",
     "react-dom": "^0.14.3",
@@ -21,7 +21,8 @@
     "eslint-loader": "^1.1.1",
     "eslint-plugin-react": "^3.11.3",
     "webpack": "^1.12.9",
-    "webpack-dev-server": "^1.14.0"
+    "webpack-dev-server": "^1.14.0",
+    "webpack-hot-middleware": "^2.6.0"
   },
   "scripts": {
     "server": "babel-node src/js/server.js",
